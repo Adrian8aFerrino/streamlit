@@ -139,7 +139,10 @@ try:
                               "particularly useful when demonstrating the functionality of specific functions or "
                               "libraries.")
 
-        st.button("Generate an random numpy array:", on_click=random_array())
+        random_button = st.button("Generate a random numpy array")
+        if random_button:
+            aleatorio = np.random.randint(1, 101, size=8)
+            st.write(aleatorio)
 
         text_seis = st.write("**Streamlit** also allows the developer to simply display **:green[Python]** code as a "
                                "way to introduce the logic behind every **:green[Python]* function that is run within "
