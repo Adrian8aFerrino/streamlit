@@ -119,7 +119,7 @@ try:
         brand_counts.columns = ['Brand_name', 'Count']
         fig = px.pie(brand_counts, values='Count', names='Brand_name', title='Interactive Pie Chart')
         st.plotly_chart(fig)
-        text_four = st.write("Both :red[NumPy] and :red[Pandas] are powerful libraries in **:green[Python]** that are "
+        text_cuatro = st.write("Both :red[NumPy] and :red[Pandas] are powerful libraries in **:green[Python]** that are "
                              "widely used for advanced data manipulation, analysis, and processing. You can leverage "
                              "**Streamlit** widgets to modify the Plotly figure's attributes, update the data, or "
                              "switch between different types of charts.")
@@ -134,24 +134,31 @@ try:
             st.plotly_chart(fig)
 
     with tab4:
-        text_cuatro = st.write("**Streamlit** allows the developer to display **:green[Python]** functions "
-                               "interactively within a web applications, enabling users to see the outcomes of "
-                               "functions in real-time. This can be particularly useful when demonstrating the "
+        text_cinco = st.write("**Streamlit** allows the developer to run **:green[Python]** functions within a web "
+                              "applications, enabling users to see the outcomes of functions in real-time. This can be "
+                              "particularly useful when demonstrating the functionality of specific functions or "
+                              "libraries.")
+
+        st.button("Generate an random numpy array:", on_click=random_array())
+
+        text_seis = st.write("**Streamlit** also allows the developer to simply display **:green[Python]** code as a "
+                               "way to introduce the logic behind every **:green[Python]* function that is run within "
+                               "the application. This can be particularly useful when demonstrating the "
                                "functionality of specific functions or libraries.")
         python_code = '''
-        def python_code_example(env, client_number, client_data):
-            while True:
-                arrival_select = np.random.choice(new_arrival.values)
-                client_data.loc[client_number, 'Arrival Rate'] = arrival_select
-                if arrival_select != 0:
-                    interarrival_time = 60 / arrival_select
-                else:
-                    interarrival_time = 60
-                yield env.timeout(interarrival_time)
-                client_number += 1
-                station_mensa.put((env.now, client_number))
-                env.process(service_process_mensa(env, client_data))
-                '''
+                def python_code_example(env, client_number, client_data):
+                    while True:
+                        arrival_select = np.random.choice(new_arrival.values)
+                        client_data.loc[client_number, 'Arrival Rate'] = arrival_select
+                        if arrival_select != 0:
+                            interarrival_time = 60 / arrival_select
+                        else:
+                            interarrival_time = 60
+                        yield env.timeout(interarrival_time)
+                        client_number += 1
+                        station_mensa.put((env.now, client_number))
+                        env.process(service_process_mensa(env, client_data))
+                        '''
         st.code(python_code, language='python')
 
 except:
