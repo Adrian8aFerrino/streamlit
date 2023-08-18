@@ -133,6 +133,13 @@ try:
                             title='Correlation Matrix')
             st.plotly_chart(fig)
 
+            st.download_button(
+                label="Download table as CSV",
+                data=correlation_matrix,
+                file_name='correlation_matrix.csv',
+                mime='text/csv',
+            )
+
     with tab4:
         text_cinco = st.write("**Streamlit** allows the developer to run **:green[Python]** functions within a web "
                               "applications, enabling users to see the outcomes of functions in real-time. This can be "
@@ -142,7 +149,8 @@ try:
         random_button = st.button("Generate a random numpy array")
         if random_button:
             aleatorio = np.random.randint(1, 101, size=8)
-            st.write(aleatorio)
+            st.dataframe(aleatorio)
+            st.table(aleatorio)
 
         text_seis = st.write("**Streamlit** also allows the developer to simply display **:green[Python]** code as a "
                                "way to introduce the logic behind every **:green[Python]* function that is run within "
