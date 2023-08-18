@@ -1,14 +1,20 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from PIL import Image
 
 st.set_page_config(page_title="Test Dashboard", page_icon=":frog:", layout="wide")
-st.title("Test project of **Streamlit** Dashboard")
+st.title("Interaktives Dashboard des Wärmegestehungskostenmodell")
 
-uploaded_file = st.file_uploader("Upload the already structured Excel file:")
+uploaded_file = st.file_uploader("Hier kannst du dein Excel Datein hochladen:")
+
+
+def add_logo(logo_path, width, height):
+    logo = Image.open(logo_path)
+    modified_logo = logo.resize((width, height))
+    return modified_logo
+
+
 try:
     if uploaded_file is not None:
         data_test1 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Demand_Watt", skiprows=3,
@@ -24,7 +30,8 @@ try:
     else:
         st.warning("Upload a valid Excel file")
 
-    st.sidebar.header("You can filter a dataset here:")
+    st.sidebar.image(add_logo(logo_path="logo.png", width=500, height=136))
+    st.sidebar.header("Wikommen beim Fraunhofer IFAM")
     coil_filter = st.sidebar.multiselect("Select a category from dataframe_2 to filter:",
                                            options=list(data_test2["Condenser_Coil"].unique()),
                                            default=list(data_test2["Condenser_Coil"].unique()))
