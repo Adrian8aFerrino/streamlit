@@ -1,12 +1,15 @@
-import streamlit as st
-import plotly.express as px
+import numpy as np
 import pandas as pd
 from PIL import Image
+import streamlit as st
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+from scipy.stats import skew, kurtosis
 
-st.set_page_config(page_title="Test Dashboard", page_icon=":frog:", layout="wide")
-st.title("Interaktives Dashboard des Wärmegestehungskostenmodell")
+st.set_page_config(page_title="Streamlit Test Dashboard", page_icon=":frog:", layout="wide")
+st.title("**:orange[Streamlit]** Test Dashboard")
 
-uploaded_file = st.file_uploader("Hier kannst du dein Excel Datein hochladen:")
+uploaded_file = st.file_uploader(label="Upload a structured CSV file:", type=["csv"])
 
 
 def add_logo(logo_path, width, height):
@@ -15,162 +18,205 @@ def add_logo(logo_path, width, height):
     return modified_logo
 
 
+def bar_chart(categorical_variable, title_var):
+    bar_chart = plt.figure(figsize=(10, 6))
+    frequency = categorical_variable.value_counts().sort_index()
+    ax = frequency.plot(kind="bar", color=plt.cm.tab20c.colors)
+    for p in ax.patches:
+        ax.annotate(str(p.get_height()), (p.get_x() + p.get_width() / 2, p.get_height()), ha='center', va='bottom')
+    ax.set_title(f"Bar plot for the frequency distribution of {title_var}")
+    ax.set_ylabel("Frequency")
+    ax.set_xlabel(f"- {title_var} -")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(bar_chart)
+
+
+def pie_chart(categorical_variable, title_var):
+    pie_chart = plt.figure(figsize=(4, 4))
+    frequency = categorical_variable.value_counts().sort_index()
+    plt.pie(frequency, labels=frequency.index, autopct='%1.1f%%', startangle=140, colors=plt.cm.tab20c.colors)
+    plt.axis('equal')
+    plt.title(f"Pie plot for the frequency distribution of {title_var}")
+    st.pyplot(pie_chart)
+
+
+def box_plot(numerical_variable, title_var):
+    box_plot = plt.figure(figsize=(10, 6))
+    ax = numerical_variable.plot(kind="box", color="blue")
+    ax.set_title(f"Box plot for {title_var}")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(box_plot)
+
+
+def time_series_plot(dataframe, title_var):
+    dataframe['Date'] = pd.to_datetime(dataframe['Date'], format="%d.%m.%Y", errors='coerce')
+    dataframe.dropna(subset=['Date'], inplace=True)
+    dataframe.drop_duplicates(subset=['Date'], inplace=True)
+    dataframe.set_index('Date', inplace=True)
+    dataframe = dataframe.sort_index(ascending=True)
+    data_test_num = dataframe[title_var].replace(",", ".", regex=True)
+    data_test_num = data_test_num.astype(float)
+    model = sm.tsa.arima.ARIMA(data_test_num, order=(1, 1, 1))
+    results = model.fit()
+    steps = len(dataframe.index) // 8
+    forecast = results.forecast(steps=steps)
+    time_series_plot = plt.figure(figsize=(10, 6))
+    plt.plot(dataframe.index, data_test_num, label='Original Data', color="blue")
+    plt.plot(pd.date_range(start=dataframe.index[-1], periods=steps, freq='D'), forecast, label='Forecast',
+             color="orange")
+    plt.title(f"Time Series plot for {title_var} with Forecast")
+    plt.xlabel("Date")
+    plt.ylabel(f"{title_var}")
+    plt.legend()
+    plt.tight_layout()
+    st.pyplot(time_series_plot)
+
+
 try:
     if uploaded_file is not None:
-        data_test1 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Demand_Watt", skiprows=3,
-                                   usecols=range(0, 8), nrows=8004)
-        data_test2 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Air_Conditioner", skiprows=4,
-                                   usecols=range(8, 15), nrows=276)
-        data_test3 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Oil_Gas", skiprows=1,
-                                   usecols=range(4, 13), nrows=23024)
-        data_test4 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Demand_Watt", skiprows=1,
-                                   usecols=range(13, 14), nrows=34880)
-        data_test5 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Correlation_Test", skiprows=0,
-                                   usecols=range(0, 14), nrows=60000)
+        data_test = pd.read_csv(uploaded_file, encoding="utf-8", sep=";")
+        st.write(data_test)
+        data_test_var = np.array(data_test.columns)
+    
+        tab1, tab2, tab3 = st.tabs(["Categorical data", "Numerical data", "Time series analysis"])
+        with tab1:
+            converted_columns = []
+            for column in data_test.columns:
+                num_categories = data_test[column].nunique()
+                if num_categories <= 12:
+                    converted_columns.append(column)
+    
+            categorical_data = st.selectbox("Select categorical data that you would want to be analyzed:",
+                                            converted_columns)
+            data_test_cat = data_test[categorical_data].astype("category")
+            st.write("Exploring categorical data involves analyzing and summarizing data that falls into distinct "
+                     "categories or groups. A frequency distribution is highly useful when dealing with categorical data."
+                     " It provides a clear and concise summary of how the different categories or values within a "
+                     "categorical variable are distributed within a dataset.")
+    
+            bar_button = st.button('Generate Bar plot')
+            if bar_button:
+                st.write(bar_chart(data_test_cat, categorical_data))
+    
+            pie_button = st.button('Generate Pie plot')
+            if pie_button:
+                st.write(pie_chart(data_test_cat, categorical_data))
+    
+            st.write("When not all categories are equally represented in a categorical variable, it can have several "
+                     "negative implications for data analysis and interpretation. This is due to the fact that an "
+                     "**:blue[Skewed discernment]** of the overall data patterns happens when a category dominates the "
+                     "distribution, generating **:blue[Bias]** in the analysis and a faulty "
+                     "**:blue[Statistical significance]**, which in turn impacts **:blue[Model performance]**.")
+    
+        with tab2:
+            converted_columns = []
+            for col in data_test.columns:
+                try:
+                    data_test[col] = data_test[col].replace(",", ".", regex=True)
+                    data_test[col] = data_test[col].astype(float)
+                    converted_columns.append(col)
+                except ValueError:
+                    pass
+    
+            numerical_data = st.selectbox("Select numerical data that you would want to be analyzed:", converted_columns)
+            data_test_num = data_test[numerical_data].replace(",", ".", regex=True)
+            data_test_num = data_test_num.astype(float)
+            st.write("Exploring numerical data involves analyzing and summarizing data skewness, central tendency, and "
+                     "variability of a variable. Summary statistics are immensely useful in data analysis for providing a "
+                     "concise and insightful overview of a dataset's characteristics. They help in understanding the "
+                     "central tendency, variability, and distribution of numerical data.")
+            mean = data_test_num.mean()
+            median = data_test_num.median()
+            mode = data_test_num.mode().iloc[0]
+            std_deviation = data_test_num.std()
+            variance = data_test_num.var()
+            quantiles = data_test_num.quantile([0.25, 0.5, 0.75])
+            skewness = skew(data_test_num)
+            kurtosis = kurtosis(data_test_num)
+    
+            col1, col2, col3, col4 = st.columns(4)
+    
+            with col1:
+                st.write("**Mean**")
+                st.write("**Median**")
+                st.write("**Mode**")
+                st.write("**Variance**")
+                st.write("**Standard Deviation**")
+    
+            with col2:
+                st.write(mean)
+                st.write(median)
+                st.write(mode)
+                st.write(std_deviation)
+                st.write(variance)
+    
+            with col3:
+                st.write("**Quantile 25%**")
+                st.write("**Quantile 50%**")
+                st.write("**Quantile 75%**")
+                st.write("**Skewness**")
+                st.write("**Kurtosis**")
+    
+            with col4:
+                st.write(quantiles.loc[0.25])
+                st.write(quantiles.loc[0.5])
+                st.write(quantiles.loc[0.75])
+                st.write(skewness)
+                st.write(kurtosis)
+    
+            box_button = st.button('Generate Box plot')
+            if box_button:
+                st.write(box_plot(data_test_num, numerical_data))
+    
+            st.write("A box plot provides a clear and concise summary of the distribution and variability of a dataset and "
+                     "are particularly useful for visualizing and comparing the distribution of numerical data. Within a "
+                     "box plot one can determine the skewness and symmetry of the distribution by comparing the length of "
+                     "the whiskers and the position of the median and quartiles")
+            st.write("Since many statistical methods assume normal distribution. Skewed data might require appropriate "
+                     "transformations in order to be mathematically tractable and ensure the validity of inferential "
+                     "statistical tests like the **:blue[ANOVA]** statistical test, **:blue[T-tests]** or "
+                     "**:blue[Correlation analysis]**.")
+    
+        with tab3:
+            converted_columns = []
+            for col in data_test.columns:
+                try:
+                    data_test[col] = data_test[col].replace(",", ".", regex=True)
+                    data_test[col] = data_test[col].astype(float)
+                    converted_columns.append(col)
+                except ValueError:
+                    pass
+    
+            numerical_data_2 = st.selectbox("Select data for Time Series plot:", converted_columns)
+            data_test_num = data_test[numerical_data_2].replace(",", ".", regex=True)
+            data_test_num = data_test_num.astype(float)
+    
+            st.write("**The following test can only be completed if the csv file includes a <Date> variable. **")
+            st.write("Time series analysis involves studying data points collected over a specific time interval, usually "
+                     "at regular intervals and is frequently employed as a way to  **:blue[Forecast]** future values based "
+                     "on historical data.")
+            if 'Date' in data_test.columns:
+                time_series_button = st.button('Generate Time Series plot')
+                if time_series_button:
+                    st.write(time_series_plot(data_test, numerical_data_2))
+    
+    
     else:
-        st.warning("Upload a valid Excel file")
-
-    st.sidebar.image(add_logo(logo_path="logo.png", width=500, height=136))
-    st.sidebar.header("Wikommen beim Fraunhofer IFAM")
-    coil_filter = st.sidebar.multiselect("Select a category from dataframe_2 to filter:",
-                                           options=list(data_test2["Condenser_Coil"].unique()),
-                                           default=list(data_test2["Condenser_Coil"].unique()))
-    symbol_filter = st.sidebar.multiselect("Select a category from dataframe_3 to filter:",
-                                           options=list(data_test3["Symbol"].unique()),
-                                           default=list(data_test3["Symbol"].unique()))
-
-    tab1, tab2, tab3, tab4 = st.tabs(["Dataframes", "Plotting", "Analysis", "Python functions"])
-
-    with tab1:
-        text_uno = st.write("**Streamlit** is an open-source **:green[Python]** library that allows developers "
-                            "to create interactive web applications for a wide variety of **:green[Python]** "
-                            "related projects. **Streamlit** enables the creation of dashboards from "
-                            "**:green[Python]** code. **Streamlit** can display excel tables as pandas "
-                            "dataframes and apply **:green[Python]** code accordingly.")
-        st.dataframe(data_test1)
-        text_uno2 = st.write("**Streamlit** can select columns, filter data, and sort values using widgets like "
-                             "dropdowns and sliders. **Streamlit** is reactive, meaning it automatically updates the "
-                             "display whenever there is a change in user input. This feature is especially useful "
-                             "when interacting with dataframes.")
-        st.dataframe(data_test2)
-        text_uno3 = st.write("**Streamlit** provides seamless integration with dataframes, allowing interaction with"
-                             " them in a straightforward manner. It enables you to display specific columns or rows "
-                             "based on user input. You can use widgets like checkboxes, select boxes, or radio "
-                             "buttons to filter and display the desired data. ")
-        st.dataframe(data_test3)
-        text_uno4 = st.write("With **Streamlit**, you can easily display, manipulate, and visualize dataframes to "
-                             "create interactive data-driven web applications. Whether it's for data exploration, "
-                             "reporting, or data analysis, Streamlit offers a simple yet powerful solution for "
-                             "working with dataframes in web applications.")
-        st.dataframe(data_test4)
-
-    with tab2:
-        text_dos = st.write("**Streamlit** can also serve as a way to generate interactive graphs with the use of "
-                            "common libraries like :red[Matplotlib], :red[Seaborn], and :red[Plotly]. These graphs "
-                            "help communicate data effectively, in a data-driven application. Visualization options "
-                            "like histograms, scatter plots, and line charts can be used to represent data "
-                            "distribution and relationships.")
-        dt3_selection = data_test3.query("Symbol == @symbol_filter")
-        average_high = round(dt3_selection["High"].mean(), 2)
-        average_low = round(dt3_selection["Low"].mean(), 2)
-        average_volume = round(dt3_selection["Volume"].mean(), 2)
-        average_performance = round(dt3_selection["Performance rating"].mean(), 0)
-
-        left_col, mid_col, mid2_col, right_col = st.columns(4)
-        with left_col:
-            st.subheader("Average High rating")
-            st.subheader(f"{average_high}")
-
-        with mid_col:
-            st.subheader("Average Low rating")
-            st.subheader(f"{average_low}")
-
-        with mid2_col:
-            st.subheader("Average Volume rating")
-            st.subheader(f"{average_volume} kg")
-
-        with right_col:
-            st.subheader("Average STAR rating")
-            stars = ":star:" * round(int(average_performance),0)
-            st.subheader(stars)
-
-        open_by_company = dt3_selection.groupby("Company")["Open"].mean().reset_index()
-        fig = px.bar(open_by_company, x="Company", y="Open", labels={"Open": "Average Open"})
-        fig.update_traces(marker_color='orange')
-        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig)
-
-        text_dos1 = st.write("**Streamlit** offers seamless interaction with plotting libraries, allowing you to "
-                             "create dynamic and interactive visualizations in your web applications. You can also "
-                             "leverage **Streamlit** widgets to modify the Plotly figure's attributes, update the "
-                             "data, or switch between different types of charts.")
-
-        data_test1['Datetime'] = pd.to_datetime(data_test1['Datetime'])
-        fig = px.line(data_test1, x='Datetime', y=data_test1.columns[1:-1])
-        st.plotly_chart(fig)
-
-    with tab3:
-        text_tres = st.write("**Streamlit** enables the user to display any type of :blue[KPI's] with the use of "
-                             ":red[Pandas] and :red[NumPy] libraries as a way to manipulate and facilitates effective "
-                             "data presentation.  Users can calculate summary statistics, run hypothesis tests, and "
-                             "generate visualizations like box plots or violin plots to understand the distribution "
-                             "of data.")
-        brand_counts = data_test2['Brand_name'].value_counts().reset_index()
-        brand_counts.columns = ['Brand_name', 'Count']
-        fig = px.pie(brand_counts, values='Count', names='Brand_name', title='Interactive Pie Chart')
-        st.plotly_chart(fig)
-        text_cuatro = st.write("Both :red[NumPy] and :red[Pandas] are powerful libraries in **:green[Python]** that are "
-                             "widely used for advanced data manipulation, analysis, and processing. You can leverage "
-                             "**Streamlit** widgets to modify the Plotly figure's attributes, update the data, or "
-                             "switch between different types of charts.")
-        st.dataframe(data_test5)
-        if st.button("Generate Correlation map of the dataframe:"):
-            correlation_matrix = data_test5.corr()
-            fig = px.imshow(correlation_matrix,
-                            x=correlation_matrix.columns,
-                            y=correlation_matrix.index,
-                            color_continuous_scale='Cividis',
-                            title='Correlation Matrix')
-            st.plotly_chart(fig)
-
-            st.download_button(
-                label="Download table as CSV",
-                data=correlation_matrix,
-                file_name='correlation_matrix.csv',
-                mime='text/csv',
-            )
-
-    with tab4:
-        text_cinco = st.write("**Streamlit** allows the developer to run **:green[Python]** functions within a web "
-                              "applications, enabling users to see the outcomes of functions in real-time. This can be "
-                              "particularly useful when demonstrating the functionality of specific functions or "
-                              "libraries.")
-
-        random_button = st.button("Generate a random numpy array")
-        if random_button:
-            aleatorio = np.random.randint(1, 101, size=8)
-            st.dataframe(aleatorio)
-            st.table(aleatorio)
-
-        text_seis = st.write("**Streamlit** also allows the developer to simply display **:green[Python]** code as a "
-                               "way to introduce the logic behind every **:green[Python]* function that is run within "
-                               "the application. This can be particularly useful when demonstrating the "
-                               "functionality of specific functions or libraries.")
-        python_code = '''
-                def python_code_example(env, client_number, client_data):
-                    while True:
-                        arrival_select = np.random.choice(new_arrival.values)
-                        client_data.loc[client_number, 'Arrival Rate'] = arrival_select
-                        if arrival_select != 0:
-                            interarrival_time = 60 / arrival_select
-                        else:
-                            interarrival_time = 60
-                        yield env.timeout(interarrival_time)
-                        client_number += 1
-                        station_mensa.put((env.now, client_number))
-                        env.process(service_process_mensa(env, client_data))
-                        '''
-        st.code(python_code, language='python')
-
+        st.warning("Avoid the following Errors within your personal CSV files:")
+        st.warning("ParserError: CSV file contains formatting issues. (missing delimiters)", icon="⚠️")
+        st.warning("Encoding error: CSV file contains non-UTF-8 encoded characters.", icon="⚠️")
+        st.warning("MemoryError: CSV file is too large to read.", icon="⚠️")
+        st.warning("Among many others...")
+    
+    st.sidebar.image(add_logo(logo_path="project_xi.png", width=500, height=500))
+    st.sidebar.header("Welcome to the **:orange[Streamlit]** Dashboard for data analytics.")
+    st.sidebar.write("Within this dashboard you can experiment with several fundamental measurements, tests, and graphs "
+                     "that are often shown in a data report.")
+    st.sidebar.divider()
+    st.sidebar.write("Business intelligence and data exploration are essential for obtaining meaningful insights from "
+                     "data, whether it is for recognizing trends and effectively conveying findings.")
+    
 except:
     pass
