@@ -193,15 +193,20 @@ try:
             data_test_num = data_test[numerical_data_2].replace(",", ".", regex=True)
             data_test_num = data_test_num.astype(float)
     
-            st.write("**The following test can only be completed if the csv file includes a <Date> variable. **")
-            st.write("Time series analysis involves studying data points collected over a specific time interval, usually "
-                     "at regular intervals and is frequently employed as a way to  **:blue[Forecast]** future values based "
-                     "on historical data.")
+            st.write("Time series analysis revolves around the examination of historical data points over time "
+                     "intervals by examining **:blue[seasonality]**, **:blue[trends]** and **:blue[fluctuations]** "
+                     "within the data, that can be later examined with techniques such as ARIMA models.")
+            st.write("For this interactive dashboard we will employ an ARIMA model which stands for "
+                     "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** and **:blue[Moving Average (MA)]** "
+                     "that are particularly effective for capturing complex patterns, trends, and seasonality in time "
+                     "series data. **:blue[(The model contains fixed p,d,q values)]**")
+
             if 'Date' in data_test.columns:
                 time_series_button = st.button('Generate Time Series plot')
                 if time_series_button:
                     st.write(time_series_plot(data_test, numerical_data_2))
-    
+            else:
+                time_series_button = st.button('No -Date- column within CSV file')
     
     else:
         st.warning("Avoid the following Errors within your personal CSV files:")
@@ -212,11 +217,15 @@ try:
     
     st.sidebar.image(add_logo(logo_path="project_xi.png", width=500, height=500))
     st.sidebar.header("Welcome to the **:orange[Streamlit]** Dashboard for data analytics.")
-    st.sidebar.write("Within this dashboard you can experiment with several fundamental measurements, tests, and graphs "
-                     "that are often shown in a data report.")
+    st.sidebar.write("Within this dashboard you can experiment with several fundamental measurements, tests, and "
+                     "graphs that are often shown in a data report.")
     st.sidebar.divider()
     st.sidebar.write("Business intelligence and data exploration are essential for obtaining meaningful insights from "
                      "data, whether it is for recognizing trends and effectively conveying findings.")
+    st.sidebar.divider()
+    st.sidebar.write("An interactive dashboard bridges the gap between theoretical and abstract methodologies "
+                     "employed in data analytics and the concrete manifestations of these methods when applied to "
+                     "real-world data.")
     
 except:
     pass
