@@ -7,71 +7,47 @@ st.set_page_config(page_title="Test Dashboard", page_icon=":frog:", layout="wide
 st.title("Test project of **Streamlit** Dashboard")
 
 
-def logo_fraunhofer():
-    st.markdown(
-        """
-            <style>
-            [data-testid="stSidebarNav"] {
-                background-image: url();
-                background-repeat: no-repeat;
-                padding-top: 120px;
-                background-position: 20px 20px;
-            }
-            [data-testid="stSidebarNav"]::before {
-                content: "Fraunhofer IFAM";
-                margin-left: 20px;
-                margin-top: 20px;
-                font-size: 30px;
-                position: relative;
-                top: 100px;
-            }
-        </style>
-        """)
+import streamlit as st
+import plotly.express as px
+import pandas as pd
+from PIL import Image
+import numpy as np
 
-uploaded_file = st.file_uploader(label="Upload a structured CSV file:", type=["csv"])
+st.set_page_config(page_title="Test Dashboard", page_icon="♻", layout="wide")
+st.title("Interaktives Dashboard des **:green[Wärmegestehungskostenmodell]**")
+
+uploaded_file = st.file_uploader("Hier kannst du dein Excel Datein hochladen:")
+
+
+def add_logo(logo_path, width, height):
+    logo = Image.open(logo_path)
+    modified_logo = logo.resize((width, height))
+    return modified_logo
+
 
 if uploaded_file is not None:
-    data_test = pd.read_csv(uploaded_file, encoding="utf-8")
-    categorical_variable = {}
-    numerical_variable = {}
-    other_variable = {}
-
-    for column_name in data_test.columns:
-        column_data = data_test[column_name]
-        # Categorical variables
-        if pd.api.types.is_categorical_dtype(column_data):
-            categorical_variable[column_name] = column_data
-        # Numerical variables
-        elif pd.api.types.is_numeric_dtype(column_data):
-            numerical_variable[column_name] = np.array(column_data)
-        else:
-            other_variable[column_name] = column_data
-
-    print("Categorical Variables:")
-    for column_name, column_data in categorical_variable.items():
-        print(f"{column_name}:")
-        print(column_data)
-        print()
-
-    # Print continuous variables
-    print("Continuous Variables:")
-    for column_name, column_data in numerical_variable.items():
-        print(f"{column_name}:")
-        print(column_data)
-        print()
-
-    # Print other variables
-    print("Other Variables:")
-    for column_name, column_data in other_variable.items():
-        print(f"{column_name}:")
-        print(column_data)
-        print()
-
+    data_test1 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Demand_Watt", skiprows=3,
+                               usecols=range(0, 8), nrows=8004)
+    data_test2 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Air_Conditioner", skiprows=4,
+                               usecols=range(8, 15), nrows=276)
+    data_test3 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Oil_Gas", skiprows=1,
+                               usecols=range(4, 13), nrows=23024)
+    data_test4 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Demand_Watt", skiprows=1,
+                               usecols=range(13, 14), nrows=34880)
+    data_test5 = pd.read_excel(io=uploaded_file, engine="openpyxl", sheet_name="Correlation_Test", skiprows=0,
+                               usecols=range(0, 14), nrows=60000)
 else:
-    st.warning("Avoid the following Errors within your personal CSV files:")
-    st.warning("ParserError: CSV file contains formatting issues. (missing delimiters)", icon="⚠️")
-    st.warning("Encoding error: CSV file contains non-UTF-8 encoded characters.", icon="⚠️")
-    st.warning("MemoryError: CSV file is too large to read.", icon="⚠️")
-    st.warning("Among many others...")
+    st.warning("Upload a valid Excel file")
 
+st.sidebar.image(add_logo(logo_path="logo.png", width=500, height=136))
+st.sidebar.header("Willkommen beim Fraunhofer IFAM")
+st.sidebar.write("Aktualisieren Sie DESTATIS-Daten automatisch aus dem Internet über die <request> library und "
+                 "vorgegebene Anweisungen zur **:green[Datenextraktion]** im Statistischen Bundesamt.")
+st.sidebar.divider()
+st.sidebar.write("Generierung von **:green[Preiszeitreihen]** unter Verwendung von Preisannahmen, um eine dynamische "
+                 "Darstellung der finanziellen Landschaft im Wärmeerzeugungssektor zu bieten, indem Schwankungen der "
+                 "Gas- und Strompreis, Netzkosten, technologische Fortschritte und regulatorische Änderungen (Steuern, "
+                 "Abgaben und Umlagen) erfasst werden.")
+st.sidebar.divider()
+st.sidebar.write("")
 
