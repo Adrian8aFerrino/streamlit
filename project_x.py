@@ -200,33 +200,33 @@ try:
                      "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** and **:blue[Moving Average (MA)]** "
                      "that are particularly effective for capturing complex patterns, trends, and seasonality in time "
                      "series data. **:blue[(The model contains fixed p,d,q values)]**")
+            st.code('''def time_series_plot(dataframe, title_var):
+    dataframe['Date'] = pd.to_datetime(dataframe['Date'], format="%d.%m.%Y", errors='coerce')
+    dataframe.dropna(subset=['Date'], inplace=True)
+    dataframe.drop_duplicates(subset=['Date'], inplace=True)
+    dataframe.set_index('Date', inplace=True)
+    dataframe = dataframe.sort_index(ascending=True)
+    data_test_num = dataframe[title_var].replace(",", ".", regex=True)
+    data_test_num = data_test_num.astype(float)
+    model = sm.tsa.arima.ARIMA(data_test_num, order=(1, 1, 1))
+    results = model.fit()
+    steps = len(dataframe.index) // 8
+    forecast = results.forecast(steps=steps)
+    time_series_plot = plt.figure(figsize=(10, 6))
+    plt.plot(dataframe.index, data_test_num, label='Original Data', color="blue")
+    plt.plot(pd.date_range(start=dataframe.index[-1], periods=steps, freq='D'), forecast, label='Forecast',
+             color="orange")
+    plt.title(f"Time Series plot for {title_var} with Forecast")
+    plt.xlabel("Date")
+    plt.ylabel(f"{title_var}")
+    plt.legend()
+    plt.tight_layout()
+    st.pyplot(time_series_plot)''', language="python")
 
             if 'Date' in data_test.columns:
                 time_series_button = st.button('Generate Time Series plot')
                 if time_series_button:
                     st.write(time_series_plot(data_test, numerical_data_2))
-                    st.code('''def time_series_plot(dataframe, title_var):
-                    dataframe['Date'] = pd.to_datetime(dataframe['Date'], format="%d.%m.%Y", errors='coerce')
-                    dataframe.dropna(subset=['Date'], inplace=True)
-                    dataframe.drop_duplicates(subset=['Date'], inplace=True)
-                    dataframe.set_index('Date', inplace=True)
-                    dataframe = dataframe.sort_index(ascending=True)
-                    data_test_num = dataframe[title_var].replace(",", ".", regex=True)
-                    data_test_num = data_test_num.astype(float)
-                    model = sm.tsa.arima.ARIMA(data_test_num, order=(1, 1, 1))
-                    results = model.fit()
-                    steps = len(dataframe.index) // 8
-                    forecast = results.forecast(steps=steps)
-                    time_series_plot = plt.figure(figsize=(10, 6))
-                    plt.plot(dataframe.index, data_test_num, label='Original Data', color="blue")
-                    plt.plot(pd.date_range(start=dataframe.index[-1], periods=steps, freq='D'), forecast, label='Forecast',
-                             color="orange")
-                    plt.title(f"Time Series plot for {title_var} with Forecast")
-                    plt.xlabel("Date")
-                    plt.ylabel(f"{title_var}")
-                    plt.legend()
-                    plt.tight_layout()
-                    st.pyplot(time_series_plot)''', language="python")
             else:
                 time_series_button = st.button('No -Date- column within CSV file')
     
