@@ -270,214 +270,120 @@ def jahresverbrauch_berechnung(erdgas_verbrauch, strom_verbrauch):
     return
 
 
-def kessel(klasse, parameter_datei, leistungs_datei):
-    print("Kessel")
+def kessel(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     if klasse == 1:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Kessel Gas":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 10), (position_tech[1] + 3):]
+        print("Kessel Gas")
+        wgk_datei = tech_datei.iloc[:10, :]
 
     elif klasse == 2:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Kessel Gas":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 10), (position_tech[1] + 3):]
+        print("Kessel Gas (Anschluss vorhanden)")
+        wgk_datei = tech_datei.iloc[:10, :]
 
     else:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Kessel Pellet":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 10), (position_tech[1] + 3):]
-    wgk_berechnung = pd.concat([pd.DataFrame([leistungs_datei], columns=tech_datei.columns), tech_datei], ignore_index=True)
-    print("TECHNOLOGIE DATEI", wgk_berechnung)
-    # EXAMPLE wgk gesamt = (df.iloc[1] / df.iloc[0]) * df.iloc[2] + df.iloc[3]
-    wgk_berechnung = (0.08 / (1500 * tech_datei.iloc[0])) + tech_datei.iloc[9]
-    return tech_datei
+        print("Kessel Pellet")
+        wgk_datei = tech_datei.iloc[10:20, :]
+
+    return wgk_datei
 
 
-def wp(klasse, parameter_datei):
-    print("Wärmepumpe")
+def wp(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     if klasse == 1:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Luft-Wasser <75 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 11), (position_tech[1] + 3):]
+        print("Wärmepumpe Luft-Wasser <75 kWh/m²a")
+        wgk_datei = tech_datei.iloc[20:31, :]
+
     elif klasse == 2:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Luft-Wasser 75 - 130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 11), (position_tech[1] + 3):]
+        print("Wärmepumpe Luft-Wasser 75 - 130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[31:42, :]
+
     elif klasse == 3:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Luft-Wasser >130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 11), (position_tech[1] + 3):]
+        print("Wärmepumpe Luft-Wasser >130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[42:53, :]
+
     elif klasse == 4:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser <75 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
+        print("Wärmepumpe Sole-Wasser <75 kWh/m²a")
+        wgk_datei = tech_datei.iloc[53:66, :]
 
     elif klasse == 5:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser <75 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
+        print("Wärmepumpe Sole-Wasser <75 kWh/m²a")
+        wgk_datei = tech_datei.iloc[53:66, :]
+
     elif klasse == 6:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser 75 - 130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
+        print("Wärmepumpe Sole-Wasser 75 - 130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[66:79, :]
 
     elif klasse == 7:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser 75 - 130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
+        print("Wärmepumpe Sole-Wasser 75 - 130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[66:79, :]
 
     elif klasse == 8:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser >130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
+        print("Wärmepumpe Sole-Wasser >130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[79:92, :]
 
     else:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Wärmepumpe Sole-Wasser >130 kWh/m²a":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 13), (position_tech[1] + 3):]
-    return tech_datei
+        print("Wärmepumpe Sole-Wasser >130 kWh/m²a")
+        wgk_datei = tech_datei.iloc[79:92, :]
+    return wgk_datei
 
 
-def wp_gk(klasse, parameter_datei):
-    print("Wärmepumpe + GasKessel")
-    for row_uno in range(parameter_datei.shape[0]):
-        for col_uno in range(parameter_datei.shape[1]):
-            if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Luft-Wasser Wärmepumpe + Kessel Gas (Gaskessel, " \
-                                                         "Wärmepumpe)":
-                position_tech = (row_uno, col_uno)
-
-    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 25), (position_tech[1] + 3):]
-
+def wp_gk(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     if klasse == 1:
-        klasse = 1
+        print("Hybrid Luft-Wasser Wärmepumpe + Kessel Gas (Gaskessel, Wärmepumpe)")
+        wgk_datei = tech_datei.iloc[92:117, :]
+
     else:
-        klasse = 0
-
-    wgk_tech = klasse * 1
-    print("Position Tech", position_tech)
-    print(tech_datei)
-
-    return wgk_tech
+        print("Hybrid Luft-Wasser Wärmepumpe + Kessel Gas (Gaskessel, Wärmepumpe)")
+        wgk_datei = tech_datei.iloc[92:117, :]
+    return wgk_datei
 
 
-def bhkw_gk(klasse, parameter_datei):
-    print("Blockheizkraftwerke")
+def bhkw_gk(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     if klasse == 1:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid BHKW + Kessel Gas 25% Eigenstromquote (" \
-                                                             "Gaskessel, BHKW)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 29), (position_tech[1] + 3):]
+        print("Hybrid BHKW + Kessel Gas 25% Eigenstromquote (Gaskessel, BHKW)")
+        wgk_datei = tech_datei.iloc[117:146, :]
+
     elif klasse == 2:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid BHKW + Kessel Gas 25% Eigenstromquote (" \
-                                                             "Gaskessel, BHKW)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 29), (position_tech[1] + 3):]
+        print("Hybrid BHKW + Kessel Gas 25% Eigenstromquote (Gaskessel, BHKW)")
+        wgk_datei = tech_datei.iloc[117:146, :]
+
     elif klasse == 3:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid BHKW + Kessel Gas 50% Eigenstromquote (" \
-                                                             "Gaskessel, BHKW)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 29), (position_tech[1] + 3):]
+        print("Hybrid BHKW + Kessel Gas 50% Eigenstromquote (Gaskessel, BHKW)")
+        wgk_datei = tech_datei.iloc[146:175, :]
+
     else:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid BHKW + Kessel Gas 50% Eigenstromquote (" \
-                                                             "Gaskessel, BHKW)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 29), (position_tech[1] + 3):]
-
-    wgk_tech = klasse * 1
-    print("Position Tech", position_tech)
-    print(tech_datei)
-
-    return wgk_tech
+        print("Hybrid BHKW + Kessel Gas 50% Eigenstromquote (Gaskessel, BHKW)")
+        wgk_datei = tech_datei.iloc[146:175, :]
+    return wgk_datei
 
 
-def st_gk(klasse, parameter_datei):
-    print("Solarthermie + Gas Kessel")
+def st_gk(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     if klasse == 1:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Kessel Gas 20 % ST (Gaskessel, " \
-                                                             "Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 21), (position_tech[1] + 3):]
+        print("Hybrid Solarthermie + Kessel Gas 20 % ST (Gaskessel, Solarthermie)")
+        wgk_datei = tech_datei.iloc[175:196, :]
+
     elif klasse == 2:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Kessel Gas 20 % ST (Gaskessel, " \
-                                                             "Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 21), (position_tech[1] + 3):]
+        print("Hybrid Solarthermie + Kessel Gas 20 % ST (Gaskessel, Solarthermie)")
+        wgk_datei = tech_datei.iloc[175:196, :]
+
     elif klasse == 3:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Kessel Gas 35 % ST (Gaskessel, " \
-                                                             "Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 21), (position_tech[1] + 3):]
+        print("Hybrid Solarthermie + Kessel Gas 35 % ST (Gaskessel, Solarthermie)")
+        wgk_datei = tech_datei.iloc[196:217, :]
+
     else:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Kessel Gas 35 % ST (Gaskessel, " \
-                                                             "Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 21), (position_tech[1] + 3):]
-
-    wgk_tech = klasse * 1
-    print("Position Tech", position_tech)
-    print(tech_datei)
-    return wgk_tech
+        print("Hybrid Solarthermie + Kessel Gas 35 % ST (Gaskessel, Solarthermie)")
+        wgk_datei = tech_datei.iloc[196:217, :]
+    return wgk_datei
 
 
-def st_lwwp(klasse, parameter_datei):
+def st_lwwp(klasse, tech_datei, investitionsjahr, leistungs_klasse):
     print("Solarthermie + Luft-Wasser Wärmepumpe")
     if klasse == 1:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Luft-Wasser Wärmepumpe 20 % ST (Wärmepumpe, Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 22), (position_tech[1] + 3):]
-    else:
-        for row_uno in range(parameter_datei.shape[0]):
-            for col_uno in range(parameter_datei.shape[1]):
-                if parameter_datei.iloc[row_uno, col_uno] == "Hybrid Solarthermie + Luft-Wasser Wärmepumpe 35 % ST (Wärmepumpe, Solarthermie)":
-                    position_tech = (row_uno, col_uno)
-                    tech_datei = parameter_datei.iloc[position_tech[0]:(position_tech[0] + 22), (position_tech[1] + 3):]
+        print("Hybrid Solarthermie + Luft-Wasser Wärmepumpe 20 % ST (Wärmepumpe, Solarthermie)")
+        wgk_datei = tech_datei.iloc[217:239, :]
 
-    wgk_tech = klasse * 1
-    print("Position Tech", position_tech)
-    print(tech_datei)
-    return wgk_tech
+    else:
+        print("Hybrid Solarthermie + Luft-Wasser Wärmepumpe 35 % ST (Wärmepumpe, Solarthermie)")
+        wgk_datei = tech_datei.iloc[239:261, :]
+    return wgk_datei
 
 
 def warmegestehungskosten_berechnung(parameter_datei):
@@ -485,14 +391,21 @@ def warmegestehungskosten_berechnung(parameter_datei):
     wb = excel.Workbooks("Mainova_VersionAOF.xlsm")
     dashboard_datei = wb.Sheets("Dashboard")
     technologie_value = dashboard_datei.Cells(5, 3).Value
-    print("READ TECHNOLOGIE INPUT", technologie_value)
+    print("TECHNOLOGIE INPUT:", technologie_value)
     leistungs_klasse = dashboard_datei.Cells(7, 3).Value
-    print("Technologie DATEI: ", technologie_value)
     print("Leistungsklasse: ", leistungs_klasse)
-    investitionsjahr = dashboard_datei.Cells(7, 3).Value
+    investitionsjahr = dashboard_datei.Cells(8, 3).Value
 
-    leistungs_datei = parameter_datei.iloc[2, 3:]
-    technologie_dict = {"Kessel Gas": (kessel, 1, leistungs_datei),
+    for row_uno in range(parameter_datei.shape[0]):
+        for col_uno in range(parameter_datei.shape[1]):
+            if parameter_datei.iloc[row_uno, col_uno] == "Technologie":
+                position_tech = (row_uno, col_uno)
+                tech_datei = parameter_datei.iloc[position_tech[0]:, position_tech[1]:]
+
+    leistungs_dict = {"15.0": 3, "30.0": 4, "70.0": 5, "125.0": 6, "200.0": 7, "350.0": 8, "850.0": 9, "1900.0": 10,
+                      "4000.0": 11}
+
+    technologie_dict = {"Kessel Gas": (kessel, 1),
                         "Kessel Gas (Anschluss vorhanden)": (kessel, 2),
                         "Kessel Pellet": (kessel, 3),
                         "Wärmepumpe Luft-Wasser <75 kWh/m²a": (wp, 1),
@@ -518,19 +431,27 @@ def warmegestehungskosten_berechnung(parameter_datei):
                         "Hybrid Solarthermie + Luft-Wasser Wärmepumpe 35 % ST": (st_lwwp, 2)
                         }
 
+    if str(leistungs_klasse) in leistungs_dict:
+        skips = leistungs_dict[str(leistungs_klasse)]
+        tech_datei = tech_datei.iloc[:, skips:]
+        tech_datei = tech_datei.iloc[1:, ::9]
+    else:
+        dashboard_datei.Cells(18, 8).Value = "Leistungsklasse ist falsch"
+
     if technologie_value in technologie_dict:
-        wgk, klasse, leistungs_klasse = technologie_dict[technologie_value]
-        print("Parameter Klasse: ", klasse)
-        print("WGK results", wgk(klasse, parameter_datei, leistungs_klasse))
+        wgk, klasse = technologie_dict[technologie_value]
+        print("WGK results\n", wgk(klasse, tech_datei, investitionsjahr, leistungs_klasse))
 
     else:
         print("Invalid Technologie input")
 
+    """
     if leistungs_klasse in leistungs_dict:
         leistungs_value = leistungs_dict[leistungs_klasse]
         print("Ergebnis Position", leistungs_value)
     else:
         print("Invalid Leistungsklasse input")
+    """
     return
 
 
@@ -548,8 +469,8 @@ if __name__ == "__main__":
 
     plot_tabelle(sheet_source="Test Sheet", range_excel="A2:E32", sheet_destination="Test Sheet", position="Q25",
                  chart_type=72)
-    
+    """
     erdgas_verbrauch, strom_verbrauch = jahresverbrauch_tabelle(destatis_datei, dashboard_datei)
     jahresverbrauch_berechnung(erdgas_verbrauch, strom_verbrauch)
-    """
+
     warmegestehungskosten_berechnung(parameter_datei)
