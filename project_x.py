@@ -1,15 +1,22 @@
 import numpy as np
+import numpy as np
 import pandas as pd
 from PIL import Image
+import seaborn as sns
 import streamlit as st
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from scipy.stats import skew, kurtosis
+from pmdarima import auto_arima
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+import warnings
+
+warnings.simplefilter('ignore', ConvergenceWarning)
 
 st.set_page_config(page_title="Streamlit Test Dashboard", page_icon=":frog:", layout="wide")
 st.title("**:orange[Streamlit]** Test Dashboard")
 
-uploaded_file = st.file_uploader(label="Upload a structured CSV file:", type=["csv"])
+uploaded_file = st.file_uploader(label="Lade eine strukturierte CSV-Datei hoch:", type=["csv"])
 
 
 def add_logo(logo_path, width, height):
@@ -19,59 +26,84 @@ def add_logo(logo_path, width, height):
 
 
 def bar_chart(categorical_variable, title_var):
-    bar_chart = plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     frequency = categorical_variable.value_counts().sort_index()
-    ax = frequency.plot(kind="bar", color=plt.cm.tab20c.colors)
-    for p in ax.patches:
-        ax.annotate(str(p.get_height()), (p.get_x() + p.get_width() / 2, p.get_height()), ha='center', va='bottom')
-    ax.set_title(f"Bar plot for the frequency distribution of {title_var}")
-    ax.set_ylabel("Frequency")
-    ax.set_xlabel(f"- {title_var} -")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(bar_chart)
+    bars = ax.bar(frequency.index, frequency.values, color=sns.color_palette("tab20c"))
+
+    ax.set_title(f"Häufigkeitsverteilung: {title_var}")
+    ax.set_ylabel("Anzahl")
+    ax.set_xlabel(title_var)
+    ax.tick_params(axis='x', rotation=45)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{int(height)}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    ha='center', va='bottom')
+
+    st.pyplot(fig)
 
 
 def pie_chart(categorical_variable, title_var):
-    pie_chart = plt.figure(figsize=(4, 4))
     frequency = categorical_variable.value_counts().sort_index()
-    plt.pie(frequency, labels=frequency.index, autopct='%1.1f%%', startangle=140, colors=plt.cm.tab20c.colors)
-    plt.axis('equal')
-    plt.title(f"Pie plot for the frequency distribution of {title_var}")
-    st.pyplot(pie_chart)
+    fig, ax = plt.subplots(figsize=(5, 5))
+    wedges, texts, autotexts = ax.pie(
+        frequency, labels=frequency.index, autopct='%1.1f%%', startangle=90,
+        colors=sns.color_palette("pastel"), textprops={'fontsize': 10}
+    )
+    ax.set_title(f"{title_var}: Anteil nach Kategorie")
+    st.pyplot(fig)
 
 
 def box_plot(numerical_variable, title_var):
-    box_plot = plt.figure(figsize=(10, 6))
-    ax = numerical_variable.plot(kind="box", color="blue")
-    ax.set_title(f"Box plot for {title_var}")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(box_plot)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.boxplot(y=numerical_variable, color="lightblue", ax=ax)
+    ax.set_title(f"Boxplot: {title_var}")
+    ax.set_ylabel(title_var)
+    st.pyplot(fig)
 
 
-def time_series_plot(dataframe, title_var):
-    dataframe['Date'] = pd.to_datetime(dataframe['Date'], format="%d.%m.%Y", errors='coerce')
+def histogram_plot(numerical_variable, title_var, bins=30):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.histplot(numerical_variable, kde=True, bins=bins, ax=ax, color="skyblue", edgecolor="black")
+    ax.set_title(f"Histogramm: {title_var}")
+    ax.set_xlabel(title_var)
+    ax.set_ylabel("Häufigkeit")
+    st.pyplot(fig)
+
+
+def time_series_plot(dataframe, column):
+    dataframe['Date'] = pd.to_datetime(dataframe['Date'], errors='coerce')
     dataframe.dropna(subset=['Date'], inplace=True)
-    dataframe.drop_duplicates(subset=['Date'], inplace=True)
+    dataframe = dataframe.drop_duplicates(subset=['Date']).sort_values(by='Date')
     dataframe.set_index('Date', inplace=True)
-    dataframe = dataframe.sort_index(ascending=True)
-    data_test_num = dataframe[title_var].replace(",", ".", regex=True)
-    data_test_num = data_test_num.astype(float)
-    model = sm.tsa.arima.ARIMA(data_test_num, order=(1, 1, 1))
-    results = model.fit()
-    steps = len(dataframe.index) // 8
-    forecast = results.forecast(steps=steps)
-    time_series_plot = plt.figure(figsize=(10, 6))
-    plt.plot(dataframe.index, data_test_num, label='Original Data', color="blue")
-    plt.plot(pd.date_range(start=dataframe.index[-1], periods=steps, freq='D'), forecast, label='Forecast',
-             color="orange")
-    plt.title(f"Time Series plot for {title_var} with Forecast")
-    plt.xlabel("Date")
-    plt.ylabel(f"{title_var}")
-    plt.legend()
-    plt.tight_layout()
-    st.pyplot(time_series_plot)
+
+    y = dataframe[column].replace(",", ".", regex=True).astype(float)
+
+    adf_result = adfuller(y)
+    st.write(f"ADF Test p-value: {adf_result[1]:.4f}")
+    if adf_result[1] > 0.05:
+        st.warning("Series appears non-stationary. Differencing may be applied.")
+    else:
+        st.success("Series appears stationary. ARIMA modeling can proceed directly.")
+
+    try:
+        with st.spinner("Fitting ARIMA model with optimal parameters..."):
+            model = auto_arima(y, seasonal=False, stepwise=True, suppress_warnings=True, error_action='ignore')
+        steps = max(7, len(y) // 8)
+        forecast, conf_int = model.predict(n_periods=steps, return_conf_int=True)
+        future_dates = pd.date_range(start=y.index[-1], periods=steps + 1, freq='D')[1:]
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(y.index, y, label="Observed", color="blue")
+        ax.plot(future_dates, forecast, label="Forecast", color="darkorange")
+        ax.fill_between(future_dates, conf_int[:, 0], conf_int[:, 1], alpha=0.3, color='orange', label='95% CI')
+        ax.set_title(f"{column} - Forecast with ARIMA")
+        ax.set_xlabel("Date")
+        ax.set_ylabel(column)
+        ax.legend()
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f"Model failed: {e}")
 
 
 try:
@@ -79,37 +111,51 @@ try:
         data_test = pd.read_csv(uploaded_file, encoding="utf-8", sep=";")
         st.write(data_test)
         data_test_var = np.array(data_test.columns)
-    
-        tab1, tab2, tab3 = st.tabs(["Categorical data", "Numerical data", "Time series analysis"])
+
+        tab1, tab2, tab3 = st.tabs(["Kategoriale Daten", "Numerische Daten", "Zeitreihenanalyse"])
         with tab1:
             converted_columns = []
             for column in data_test.columns:
                 num_categories = data_test[column].nunique()
                 if num_categories <= 12:
                     converted_columns.append(column)
-    
-            categorical_data = st.selectbox("Select categorical data that you would want to be analyzed:",
+
+            categorical_data = st.selectbox("Wählen Sie die kategorialen Daten aus, die Sie analysieren möchten:",
                                             converted_columns)
             data_test_cat = data_test[categorical_data].astype("category")
-            st.write("Exploring categorical data involves analyzing and summarizing data that falls into distinct "
-                     "categories or groups. A frequency distribution is highly useful when dealing with categorical data."
-                     " It provides a clear and concise summary of how the different categories or values within a "
-                     "categorical variable are distributed within a dataset.")
-    
-            bar_button = st.button('Generate Bar plot')
+            st.write("Die Untersuchung kategorialer Daten umfasst die Analyse und Zusammenfassung von Daten, "
+                     "die in verschiedene Kategorien oder Gruppen fallen. Eine Häufigkeitsverteilung ist bei "
+                     "der Arbeit mit kategorialen Daten sehr nützlich. Sie bietet eine klare und prägnante "
+                     "Zusammenfassung darüber, wie die verschiedenen Kategorien oder Werte innerhalb einer "
+                     "kategorialen Variablen innerhalb eines Datensatzes verteilt sind.")
+
+            bar_button = st.button('Balkendiagramm erstellen')
             if bar_button:
                 st.write(bar_chart(data_test_cat, categorical_data))
-    
-            pie_button = st.button('Generate Pie plot')
+
+            st.write("Das Dashboard enthält zwei wichtige visuelle Tools zur Analyse kategorialer Variablen: "
+                     "Balkendiagramme und Kreisdiagramme. Balkendiagramme bieten eine übersichtliche Darstellung "
+                     "der Häufigkeitsverteilung von Kategorien und eignen sich daher ideal zum Erkennen "
+                     "dominanter Gruppen, seltener Ereignisse und Ungleichgewichte in den Daten. Diese Diagramme "
+                     "unterstützen die vergleichende Analyse zwischen Gruppen und sind besonders nützlich bei "
+                     "der Interpretation nominaler oder ordinaler Variablen. Im Gegensatz dazu betonen "
+                     "Kreisdiagramme die relativen Anteile jeder Kategorie und bieten eine intuitivere "
+                     "Darstellung, wenn es darum geht, zu vermitteln, wie viel jede Gruppe zum Ganzen beiträgt. "
+                     "Zusammen helfen diese Visualisierungen den Benutzern, die Struktur, Ausgewogenheit und "
+                     "potenzielle Verzerrung kategorialer Merkmale zu bewerten, was bei der Vorbereitung von "
+                     "Daten für die Modellierung oder Interpretation von entscheidender Bedeutung ist.")
+
+            pie_button = st.button('Kreisdiagramm erstellen')
             if pie_button:
                 st.write(pie_chart(data_test_cat, categorical_data))
-    
-            st.write("When not all categories are equally represented in a categorical variable, it can have several "
-                     "negative implications for data analysis and interpretation. This is due to the fact that an "
-                     "**:blue[Skewed discernment]** of the overall data patterns happens when a category dominates the "
-                     "distribution, generating **:blue[Bias]** in the analysis and a faulty "
-                     "**:blue[Statistical significance]**, which in turn impacts **:blue[Model performance]**.")
-    
+
+            st.write("Wenn nicht alle Kategorien in einer kategorialen Variablen gleichermaßen vertreten sind, "
+                     "kann dies mehrere negative Auswirkungen auf die Datenanalyse und -interpretation haben. Dies "
+                     "liegt daran, dass es zu einer **:blue[verzerrten Wahrnehmung]** der Gesamtdatenmuster kommt, "
+                     "wenn eine Kategorie die Verteilung dominiert, was zu einer Verzerrung der Analyse und einer "
+                     "fehlerhaften **:blue[statistischen Signifikanz]** führt, was sich wiederum auf die "
+                     "**:blue[Modellleistung auswirkt]**.")
+
         with tab2:
             converted_columns = []
             for col in data_test.columns:
@@ -119,14 +165,22 @@ try:
                     converted_columns.append(col)
                 except ValueError:
                     pass
-    
-            numerical_data = st.selectbox("Select numerical data that you would want to be analyzed:", converted_columns)
+
+            numerical_data = st.selectbox("Wählen Sie die numerische Daten aus, die Sie analysieren möchten:",
+                                          converted_columns)
             data_test_num = data_test[numerical_data].replace(",", ".", regex=True)
             data_test_num = data_test_num.astype(float)
-            st.write("Exploring numerical data involves analyzing and summarizing data skewness, central tendency, and "
-                     "variability of a variable. Summary statistics are immensely useful in data analysis for providing a "
-                     "concise and insightful overview of a dataset's characteristics. They help in understanding the "
-                     "central tendency, variability, and distribution of numerical data.")
+            st.write("Das Dashboard bietet mehrere Visualisierungsmethoden zur Untersuchung numerischer Daten: "
+                     "Boxplots, Histogramme und Zeitreihendiagramme. Boxplots bieten eine kompakte Zusammenfassung "
+                     "der Verteilungsmerkmale – wie Median, Streuung, Schiefe und Ausreißer –, sodass Benutzer "
+                     "Anomalien erkennen und die Variabilität auf einen Blick beurteilen können. Histogramme "
+                     "ergänzen Boxplots, indem sie die Häufigkeit von Werten über definierte Intervalle (Bins) "
+                     "hinweg veranschaulichen, was Benutzern hilft, die Form, Modalität und Schiefe der Verteilung "
+                     "zu verstehen. Schließlich kombiniert das Zeitreihendiagramm Datenvisualisierung mit Prognosen, "
+                     "indem es ein ARIMA-Modell verwendet, um Trends zu erkennen und zukünftige Werte zu "
+                     "prognostizieren, wobei Unsicherheiten durch Konfidenzintervalle berücksichtigt werden. "
+                     "Diese Diagramme bilden ein umfassendes Toolkit für die Analyse numerischer Variablen, die "
+                     "Validierung von Annahmen und die Generierung prädiktiver Erkenntnisse.")
             mean = data_test_num.mean()
             median = data_test_num.median()
             mode = data_test_num.mode().iloc[0]
@@ -135,50 +189,58 @@ try:
             quantiles = data_test_num.quantile([0.25, 0.5, 0.75])
             skewness = skew(data_test_num)
             kurtosis = kurtosis(data_test_num)
-    
+
             col1, col2, col3, col4 = st.columns(4)
-    
+
             with col1:
-                st.write("**Mean**")
+                st.write("**Mittelwert**")
                 st.write("**Median**")
-                st.write("**Mode**")
-                st.write("**Variance**")
-                st.write("**Standard Deviation**")
-    
+                st.write("**Modus**")
+                st.write("**Varianz**")
+                st.write("**Standardabweichung**")
+
             with col2:
                 st.write(mean)
                 st.write(median)
                 st.write(mode)
                 st.write(std_deviation)
                 st.write(variance)
-    
+
             with col3:
-                st.write("**Quantile 25%**")
-                st.write("**Quantile 50%**")
-                st.write("**Quantile 75%**")
-                st.write("**Skewness**")
+                st.write("**Quantil 25%**")
+                st.write("**Quantil 50%**")
+                st.write("**Quantil 75%**")
+                st.write("**Schiefe**")
                 st.write("**Kurtosis**")
-    
+
             with col4:
                 st.write(quantiles.loc[0.25])
                 st.write(quantiles.loc[0.5])
                 st.write(quantiles.loc[0.75])
                 st.write(skewness)
                 st.write(kurtosis)
-    
+
             box_button = st.button('Generate Box plot')
             if box_button:
                 st.write(box_plot(data_test_num, numerical_data))
-    
-            st.write("A box plot provides a clear and concise summary of the distribution and variability of a dataset and "
-                     "are particularly useful for visualizing and comparing the distribution of numerical data. Within a "
-                     "box plot one can determine the skewness and symmetry of the distribution by comparing the length of "
-                     "the whiskers and the position of the median and quartiles")
-            st.write("Since many statistical methods assume normal distribution. Skewed data might require appropriate "
-                     "transformations in order to be mathematically tractable and ensure the validity of inferential "
-                     "statistical tests like the **:blue[ANOVA]** statistical test, **:blue[T-tests]** or "
-                     "**:blue[Correlation analysis]**.")
-    
+
+            st.write("Die Boxplot-Funktion ist ein zentrales Werkzeug bei der statistischen Datenauswertung. Sie "
+                     "fasst die Verteilung einer numerischen Variablen anhand wichtiger Quantile (Minimum, Q1, "
+                     "Median, Q3, Maximum) zusammen und hebt potenzielle Ausreißer hervor. Boxplots sind "
+                     "entscheidend für die schnelle Beurteilung der Symmetrie, Schiefe und Streuung von Daten "
+                     "sowie für die Identifizierung von Extremwerten, die sich auf nachgelagerte Modelle oder "
+                     "Analysen auswirken könnten. Sie sind besonders wertvoll, wenn es darum geht, die Verteilungen"
+                     " mehrerer Variablen zu vergleichen oder die Konsistenz von Messungen über einen bestimmten "
+                     "Zeitraum oder über verschiedene Kategorien hinweg zu verstehen.")
+
+            histogram_button = st.button('Histogramm erstellen')
+            if histogram_button:
+                st.write(histogram_plot(data_test_num, numerical_data))
+
+            st.write("Many statistical methods assume that data is normally distributed. When data is skewed, "
+                     "transformations may be necessary to meet these assumptions and ensure the validity of "
+                     "tests such as **:blue[ANOVA]**, **:blue[t-tests]**, and **:blue[correlation analysis]**.")
+
         with tab3:
             converted_columns = []
             for col in data_test.columns:
@@ -188,66 +250,52 @@ try:
                     converted_columns.append(col)
                 except ValueError:
                     pass
-    
+
             numerical_data_2 = st.selectbox("Select data for Time Series plot:", converted_columns)
             data_test_num = data_test[numerical_data_2].replace(",", ".", regex=True)
             data_test_num = data_test_num.astype(float)
-    
-            st.write("Time series analysis revolves around the examination of historical data points over time "
-                     "intervals by examining **:blue[seasonality]**, **:blue[trends]** and **:blue[fluctuations]** "
-                     "within the data, that can be later examined with techniques such as ARIMA models.")
-            st.write("For this interactive dashboard we will employ an ARIMA model which stands for "
-                     "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** and **:blue[Moving Average (MA)]** "
-                     "that are particularly effective for capturing complex patterns, trends, and seasonality in time "
-                     "series data. **:blue[(The model contains fixed p,d,q values)]**")
-            st.code('''def time_series_plot(dataframe, title_var):
-    dataframe['Date'] = pd.to_datetime(dataframe['Date'], format="%d.%m.%Y", errors='coerce')
-    dataframe.dropna(subset=['Date'], inplace=True)
-    dataframe.drop_duplicates(subset=['Date'], inplace=True)
-    dataframe.set_index('Date', inplace=True)
-    dataframe = dataframe.sort_index(ascending=True)
-    data_test_num = dataframe[title_var].replace(",", ".", regex=True)
-    data_test_num = data_test_num.astype(float)
-    model = sm.tsa.arima.ARIMA(data_test_num, order=(1, 1, 1))
-    results = model.fit()
-    steps = len(dataframe.index) // 8
-    forecast = results.forecast(steps=steps)
-    time_series_plot = plt.figure(figsize=(10, 6))
-    plt.plot(dataframe.index, data_test_num, label='Original Data', color="blue")
-    plt.plot(pd.date_range(start=dataframe.index[-1], periods=steps, freq='D'), forecast, label='Forecast',
-             color="orange")
-    plt.title(f"Time Series plot for {title_var} with Forecast")
-    plt.xlabel("Date")
-    plt.ylabel(f"{title_var}")
-    plt.legend()
-    plt.tight_layout()
-    st.pyplot(time_series_plot)''', language="python")
+
+            st.write("Die Zeitreihenanalyse befasst sich mit der Untersuchung historischer Datenpunkte über "
+                     "Zeitintervalle hinweg, indem sie **:blue[Saisonalität]**, **:blue[Trends]** und "
+                     "**:blue[Schwankungen]** innerhalb der Daten untersucht, die später mit Techniken wie "
+                     "ARIMA-Modellen untersucht werden können.")
+            st.write("Für dieses interaktive Dashboard verwenden wir ein ARIMA-Modell, das für "
+                     "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** und **:blue[Moving Average (MA)]** "
+                     "steht, das besonders effektiv ist, um komplexe Muster, Trends und Saisonalität in "
+                     "Zeitreihendaten zu erfassen. **:blue[(Das Modell enthält feste p-, d- und q-Werte)]**")
+            st.write("Mit der Zeitreihen-Plot-Funktion können Benutzer visualisieren, wie sich eine numerische "
+                     "Variable im Laufe der Zeit entwickelt, und diese Analyse mithilfe der ARIMA-Modellierung "
+                     "(Autoregressive Integrated Moving Average) auf die Zukunft ausweiten. Die Zeitreihenanalyse "
+                     "ist unerlässlich, um zeitliche Trends, Saisonalität, zyklisches Verhalten und "
+                     "Musterverschiebungen aufzudecken.")
 
             if 'Date' in data_test.columns:
-                time_series_button = st.button('Generate Time Series plot')
+                time_series_button = st.button('Zeitreihen-Diagramm erstellen')
                 if time_series_button:
                     st.write(time_series_plot(data_test, numerical_data_2))
             else:
-                time_series_button = st.button('No -Date- column within CSV file')
-    
+                time_series_button = st.button('Keine „Date“-Spalte in der CSV-Datei')
+
     else:
-        st.warning("Avoid the following Errors within your personal CSV files:")
-        st.warning("ParserError: CSV file contains formatting issues. (missing delimiters)", icon="⚠️")
-        st.warning("Encoding error: CSV file contains non-UTF-8 encoded characters.", icon="⚠️")
-        st.warning("MemoryError: CSV file is too large to read.", icon="⚠️")
-        st.warning("Among many others...")
-    
+        st.warning("Vermeiden Sie die folgenden Fehler in Ihren persönlichen CSV-Dateien:")
+        st.warning("ParserError: CSV-Datei enthält Formatierungsfehler. (fehlende Trennzeichen)", icon="⚠️")
+        st.warning("Kodierungsfehler: CSV-Datei enthält Zeichen, die nicht in UTF-8 kodiert sind.", icon="⚠️")
+        st.warning("Speicherfehler: Die CSV-Datei ist zu groß, um gelesen zu werden.", icon="⚠️")
+        st.warning("Unter vielen anderen...")
+
     st.sidebar.image(add_logo(logo_path="project_xi.png", width=500, height=500))
-    st.sidebar.header("Welcome to the **:orange[Streamlit]** Dashboard for data analytics.")
-    st.sidebar.write("Within this dashboard you can experiment with several fundamental measurements, tests, and "
-                     "graphs that are often shown in a data report.")
+    st.sidebar.header("Willkommen beim **:orange[Streamlit]** Dashboard für Datenanalysen.")
+    st.sidebar.write("Das Dashboard dient dem Experimentieren mit verschiedenen grundlegenden Messungen, Tests und "
+                     "Grafiken, die häufig in Datenberichten zur Anzeige kommen.")
     st.sidebar.divider()
-    st.sidebar.write("Business intelligence and data exploration are essential for obtaining meaningful insights from "
-                     "data, whether it is for recognizing trends and effectively conveying findings.")
+    st.sidebar.write("Business intelligence und Datenauswertung sind unerlässlich, um aussagekräftige Erkenntnisse "
+                     "aus Daten zu gewinnen - sei es zur Erkennung von Trends oder zur effektiven Vermittlung von "
+                     "Ergebnissen.")
     st.sidebar.divider()
-    st.sidebar.write("An interactive dashboard bridges the gap between theoretical and abstract methodologies "
-                     "employed in data analytics and the concrete manifestations of these methods when applied to "
-                     "real-world data.")
-    
+    st.sidebar.write("Ein interaktives Dashboard schließt die Lücke zwischen den theoreitschen und abstrakten "
+                     "Methoden der Datenanalyse und den konkreten Ergebnissen, die sich ergeben, wenn diese "
+                     "Methoden auf reale Daten angewendet werden.")
+
 except:
     pass
+
