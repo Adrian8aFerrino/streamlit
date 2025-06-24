@@ -1,5 +1,4 @@
 import numpy as np
-import numpy as np
 import pandas as pd
 from PIL import Image
 import seaborn as sns
@@ -80,30 +79,32 @@ def time_series_plot(dataframe, column):
     y = dataframe[column].replace(",", ".", regex=True).astype(float)
 
     adf_result = adfuller(y)
-    st.write(f"ADF Test p-value: {adf_result[1]:.4f}")
+    st.write(f"Augmented Dickey–Fuller (ADF) Test p-value: {adf_result[1]:.4f}")
+
     if adf_result[1] > 0.05:
-        st.warning("Series appears non-stationary. Differencing may be applied.")
+        st.warning("Die Reihe scheint nicht stationär zu sein. Eine Differenzierung kann angewendet werden.")
     else:
-        st.success("Series appears stationary. ARIMA modeling can proceed directly.")
+        st.success("Die Reihe erscheint stationär. Die ARIMA-Modellierung kann direkt fortgesetzt werden.")
 
     try:
-        with st.spinner("Fitting ARIMA model with optimal parameters..."):
+        with st.spinner("Anpassung des ARIMA-Modells mit optimalen Parametern..."):
             model = auto_arima(y, seasonal=False, stepwise=True, suppress_warnings=True, error_action='ignore')
         steps = max(7, len(y) // 8)
         forecast, conf_int = model.predict(n_periods=steps, return_conf_int=True)
         future_dates = pd.date_range(start=y.index[-1], periods=steps + 1, freq='D')[1:]
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(y.index, y, label="Observed", color="blue")
-        ax.plot(future_dates, forecast, label="Forecast", color="darkorange")
+        ax.plot(y.index, y, label="Historische", color="blue")
+        ax.plot(future_dates, forecast, label="Prognose", color="darkorange")
         ax.fill_between(future_dates, conf_int[:, 0], conf_int[:, 1], alpha=0.3, color='orange', label='95% CI')
-        ax.set_title(f"{column} - Forecast with ARIMA")
-        ax.set_xlabel("Date")
+        ax.set_title(f"{column} - Prognose mit ARIMA")
+        ax.set_xlabel("Datum")
         ax.set_ylabel(column)
         ax.legend()
         st.pyplot(fig)
+
     except Exception as e:
-        st.error(f"Model failed: {e}")
+        st.error(f"Modell fehlgeschlagen: {e}")
 
 
 try:
@@ -120,12 +121,12 @@ try:
                 if num_categories <= 12:
                     converted_columns.append(column)
 
-            categorical_data = st.selectbox("Wählen Sie die kategorialen Daten aus, die Sie analysieren möchten:",
+            categorical_data = st.selectbox("Die kategorialen Daten auswählen:",
                                             converted_columns)
             data_test_cat = data_test[categorical_data].astype("category")
             st.write("Die Untersuchung kategorialer Daten umfasst die Analyse und Zusammenfassung von Daten, "
                      "die in verschiedene Kategorien oder Gruppen fallen. Eine Häufigkeitsverteilung ist bei "
-                     "der Arbeit mit kategorialen Daten sehr nützlich. Sie bietet eine klare und prägnante "
+                     "der Arbeit mit kategorialen Daten sehr nützlich. Die bietet eine klare und prägnante "
                      "Zusammenfassung darüber, wie die verschiedenen Kategorien oder Werte innerhalb einer "
                      "kategorialen Variablen innerhalb eines Datensatzes verteilt sind.")
 
@@ -166,7 +167,7 @@ try:
                 except ValueError:
                     pass
 
-            numerical_data = st.selectbox("Wählen Sie die numerische Daten aus, die Sie analysieren möchten:",
+            numerical_data = st.selectbox("Die numerische Daten auswählen:",
                                           converted_columns)
             data_test_num = data_test[numerical_data].replace(",", ".", regex=True)
             data_test_num = data_test_num.astype(float)
@@ -224,12 +225,12 @@ try:
             if box_button:
                 st.write(box_plot(data_test_num, numerical_data))
 
-            st.write("Die Boxplot-Funktion ist ein zentrales Werkzeug bei der statistischen Datenauswertung. Sie "
+            st.write("Die Boxplot-Funktion ist ein zentrales Werkzeug bei der statistischen Datenauswertung. Die "
                      "fasst die Verteilung einer numerischen Variablen anhand wichtiger Quantile (Minimum, Q1, "
                      "Median, Q3, Maximum) zusammen und hebt potenzielle Ausreißer hervor. Boxplots sind "
                      "entscheidend für die schnelle Beurteilung der Symmetrie, Schiefe und Streuung von Daten "
                      "sowie für die Identifizierung von Extremwerten, die sich auf nachgelagerte Modelle oder "
-                     "Analysen auswirken könnten. Sie sind besonders wertvoll, wenn es darum geht, die Verteilungen"
+                     "Analysen auswirken könnten. Die sind besonders wertvoll, wenn es darum geht, die Verteilungen"
                      " mehrerer Variablen zu vergleichen oder die Konsistenz von Messungen über einen bestimmten "
                      "Zeitraum oder über verschiedene Kategorien hinweg zu verstehen.")
 
@@ -237,9 +238,10 @@ try:
             if histogram_button:
                 st.write(histogram_plot(data_test_num, numerical_data))
 
-            st.write("Many statistical methods assume that data is normally distributed. When data is skewed, "
-                     "transformations may be necessary to meet these assumptions and ensure the validity of "
-                     "tests such as **:blue[ANOVA]**, **:blue[t-tests]**, and **:blue[correlation analysis]**.")
+            st.write("Wichtig: Viele statistische Methoden gehen davon aus, dass die Daten normalverteilt sind."
+                     "Wenn Daten nicht normalverteilt sind, können Transformationen erforderlich sein, um "
+                     "diese Annahmen zu erfüllen und die Gültigkeit von Tests wie **:blue[ANOVA]**, "
+                     "**:blue[t-tests]** und **:blue[Korrelationsanalysen]** sicherzustellen.")
 
         with tab3:
             converted_columns = []
@@ -247,17 +249,17 @@ try:
                 try:
                     data_test[col] = data_test[col].replace(",", ".", regex=True)
                     data_test[col] = data_test[col].astype(float)
-                    converted_columns.append(col)
+                    converted_columns = [data_test.columns[-1]]
                 except ValueError:
                     pass
 
-            numerical_data_2 = st.selectbox("Select data for Time Series plot:", converted_columns)
+            numerical_data_2 = st.selectbox("Daten für Zeitreihendiagramm auswählen:", converted_columns)
             data_test_num = data_test[numerical_data_2].replace(",", ".", regex=True)
             data_test_num = data_test_num.astype(float)
 
             st.write("Die Zeitreihenanalyse befasst sich mit der Untersuchung historischer Datenpunkte über "
-                     "Zeitintervalle hinweg, indem sie **:blue[Saisonalität]**, **:blue[Trends]** und "
-                     "**:blue[Schwankungen]** innerhalb der Daten untersucht, die später mit Techniken wie "
+                     "Zeitintervalle hinweg, indem die **:blue[Saisonalität]**, **:blue[Trends]** und "
+                     "**:blue[Schwankungen]** innerhalb der Daten untersucht wird, die später mit Techniken wie "
                      "ARIMA-Modellen untersucht werden können.")
             st.write("Für dieses interaktive Dashboard verwenden wir ein ARIMA-Modell, das für "
                      "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** und **:blue[Moving Average (MA)]** "
@@ -298,4 +300,3 @@ try:
 
 except:
     pass
-
