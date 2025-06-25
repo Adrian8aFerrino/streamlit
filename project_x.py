@@ -71,40 +71,74 @@ def histogram_plot(numerical_variable, title_var, bins=30):
 
 
 def time_series_plot(dataframe, column):
+    # Clean and prepare
+    dataframe = dataframe.copy()
     dataframe['Date'] = pd.to_datetime(dataframe['Date'], errors='coerce')
-    dataframe.dropna(subset=['Date'], inplace=True)
-    dataframe = dataframe.drop_duplicates(subset=['Date']).sort_values(by='Date')
+    dataframe = dataframe.dropna(subset=['Date']).drop_duplicates('Date').sort_values('Date')
     dataframe.set_index('Date', inplace=True)
 
-    y = dataframe[column].replace(",", ".", regex=True).astype(float)
+    # Parse European decimal and convert to float
+    series = dataframe[column].astype(str).str.replace(',', '.', regex=False)
+    series = pd.to_numeric(series, errors='coerce').dropna()
 
-    adf_result = adfuller(y)
-    st.write(f"Augmented Dickey–Fuller (ADF) Test p-value: {adf_result[1]:.4f}")
+    # Filter last 90 days
+    model_series = series.loc[series.index >= series.index.max() - pd.Timedelta(days=90)]
+    plot_series = series.loc[series.index >= series.index.max() - pd.Timedelta(days=180)]
 
+    # Set daily frequency and interpolate gaps
+    model_series = model_series.asfreq('D')
+    model_series = model_series.interpolate(method='time', limit_direction='forward').dropna()
+    model_series.index.freq = pd.infer_freq(model_series.index)
+
+    if model_series.empty or len(model_series) < 30:
+        st.warning("Nicht genügend Datenpunkte für eine zuverlässige Vorhersage.")
+        return
+
+    # Stationarity check
+    adf_result = adfuller(model_series)
+    st.write(f"ADF-Test p-Wert: {adf_result[1]:.4f}")
     if adf_result[1] > 0.05:
-        st.warning("Die Reihe scheint nicht stationär zu sein. Eine Differenzierung kann angewendet werden.")
+        st.warning("Nicht stationär – Differenzierung wird automatisch angewendet.")
     else:
-        st.success("Die Reihe erscheint stationär. Die ARIMA-Modellierung kann direkt fortgesetzt werden.")
+        st.success("Stationär – SARIMA kann direkt angewendet werden.")
 
     try:
-        with st.spinner("Anpassung des ARIMA-Modells mit optimalen Parametern..."):
-            model = auto_arima(y, seasonal=False, stepwise=True, suppress_warnings=True, error_action='ignore')
-        steps = max(7, len(y) // 8)
+        with st.spinner("SARIMA-Modellanpassung mit Saisonalität..."):
+            model = auto_arima(
+                model_series,
+                seasonal=True,
+                m=30,  # Monthly seasonality
+                d=None,
+                D=None,
+                stepwise=True,
+                suppress_warnings=True,
+                error_action='ignore',
+                trace=False,
+                start_p=1, start_q=1,
+                max_p=3, max_q=3,
+                start_P=0, start_Q=0,
+                max_P=2, max_Q=2,
+                test='adf',
+                seasonal_test='ocsb',
+                information_criterion='aic'
+            )
+
+        steps = 14
         forecast, conf_int = model.predict(n_periods=steps, return_conf_int=True)
-        future_dates = pd.date_range(start=y.index[-1], periods=steps + 1, freq='D')[1:]
+        forecast_dates = pd.date_range(start=model_series.index[-1] + pd.Timedelta(days=1), periods=steps, freq='D')
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(y.index, y, label="Historische", color="blue")
-        ax.plot(future_dates, forecast, label="Prognose", color="darkorange")
-        ax.fill_between(future_dates, conf_int[:, 0], conf_int[:, 1], alpha=0.3, color='orange', label='95% CI')
-        ax.set_title(f"{column} - Prognose mit ARIMA")
+        ax.plot(plot_series.index, plot_series, label='Historisch', color='blue')
+        ax.plot(forecast_dates, forecast, label='Prognose', color='darkorange')
+        ax.fill_between(forecast_dates, conf_int[:, 0], conf_int[:, 1], color='orange', alpha=0.3, label='95% Konfidenzintervall')
+        ax.set_title(f"SARIMA Prognose für {column}")
         ax.set_xlabel("Datum")
         ax.set_ylabel(column)
         ax.legend()
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Modell fehlgeschlagen: {e}")
+        st.error(f"Modellfehler: {e}")
 
 
 try:
@@ -178,7 +212,7 @@ try:
                      "ergänzen Boxplots, indem sie die Häufigkeit von Werten über definierte Intervalle (Bins) "
                      "hinweg veranschaulichen, was Benutzern hilft, die Form, Modalität und Schiefe der Verteilung "
                      "zu verstehen. Schließlich kombiniert das Zeitreihendiagramm Datenvisualisierung mit Prognosen, "
-                     "indem es ein ARIMA-Modell verwendet, um Trends zu erkennen und zukünftige Werte zu "
+                     "indem es ein SARIMA-Modell verwendet, um Trends zu erkennen und zukünftige Werte zu "
                      "prognostizieren, wobei Unsicherheiten durch Konfidenzintervalle berücksichtigt werden. "
                      "Diese Diagramme bilden ein umfassendes Toolkit für die Analyse numerischer Variablen, die "
                      "Validierung von Annahmen und die Generierung prädiktiver Erkenntnisse.")
@@ -247,21 +281,17 @@ try:
             converted_columns = []
             for col in data_test.columns:
                 try:
-                    data_test[col] = data_test[col].replace(",", ".", regex=True)
-                    data_test[col] = data_test[col].astype(float)
                     converted_columns = [data_test.columns[-1]]
                 except ValueError:
                     pass
 
             numerical_data_2 = st.selectbox("Daten für Zeitreihendiagramm auswählen:", converted_columns)
-            data_test_num = data_test[numerical_data_2].replace(",", ".", regex=True)
-            data_test_num = data_test_num.astype(float)
 
             st.write("Die Zeitreihenanalyse befasst sich mit der Untersuchung historischer Datenpunkte über "
                      "Zeitintervalle hinweg, indem die **:blue[Saisonalität]**, **:blue[Trends]** und "
                      "**:blue[Schwankungen]** innerhalb der Daten untersucht wird, die später mit Techniken wie "
-                     "ARIMA-Modellen untersucht werden können.")
-            st.write("Für dieses interaktive Dashboard verwenden wir ein ARIMA-Modell, das für "
+                     "SARIMA-Modellen untersucht werden können.")
+            st.write("Für dieses interaktive Dashboard verwenden wir ein SARIMA-Modell, das für **:blue[Seasonality]** "
                      "**:blue[Autoregressive (AR)]**, **:blue[Integrated (I)]** und **:blue[Moving Average (MA)]** "
                      "steht, das besonders effektiv ist, um komplexe Muster, Trends und Saisonalität in "
                      "Zeitreihendaten zu erfassen. **:blue[(Das Modell enthält feste p-, d- und q-Werte)]**")
@@ -300,3 +330,4 @@ try:
 
 except:
     pass
+
